@@ -126,7 +126,7 @@ int main(int argc, char* argv[]){
     fprintf(stderr, "Error: num_hops must be in the range [0-512]\n");
     exit(EXIT_FAILURE);
   }
-  const unsigned int port_num = atoi(argv[1]);
+  const char* port_num = argv[1];
   const unsigned int num_players = atoi(argv[2]);
   const unsigned int num_hops = atoi(argv[3]);
 
@@ -138,8 +138,8 @@ int main(int argc, char* argv[]){
 
   // Initialize potato
   potato hot_potato = {.num_hops = num_hops, .current_hop = 0};
-  printf("Potato's num_hops = %u, current_hops = %u\n", hot_potato.num_hops,
-	 hot_potato.current_hop);
+  //printf("Potato's num_hops = %u, current_hops = %u\n", hot_potato.num_hops,
+  //	 hot_potato.current_hop);
 
   // Ringmaster must set up connections with players
   
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]){
   struct addrinfo ringmaster_info;
   struct addrinfo* player_info_list;
   const char* ringmaster_name = NULL;
-  const char* player_port = "4444";
+  //const char* player_port = "4444";
   
   // Initialize ringmaster addrinfo struct
   memset(&ringmaster_info, 0, sizeof(ringmaster_info));
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]){
   ringmaster_info.ai_socktype = SOCK_STREAM; // use TCP
   //ringmaster_info.ai_flags = don't set for now, keep generic connections 
 
-  status = getaddrinfo(ringmaster_name, player_port, &ringmaster_info, &player_info_list);
+  status = getaddrinfo(ringmaster_name, port_num, &ringmaster_info, &player_info_list);
   if (status != 0){
     fprintf(stderr, "Error: getaddrinfo() call failed\n");
     exit(EXIT_FAILURE);
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]){
     fprintf(stderr, "Error: cannot listen on socket\n");
     exit(EXIT_FAILURE);
   }
-  printf("Listening for player info on port %s\n", player_port);
+  printf("Listening for player info on port %s\n", port_num);
 
   struct sockaddr_storage socket_addr;
   socklen_t socket_addr_len = sizeof(socket_addr);
@@ -207,11 +207,18 @@ int main(int argc, char* argv[]){
     fprintf(stderr, "Error: accept() call failed\n");
     exit(EXIT_FAILURE);
   }
-  potato potato_buffer[2] = {};
+  
+  potato potato_buffer[1] = {}; // used to hold passed data
+
   recv(player_fd, potato_buffer, sizeof(potato), 0); // no flags, accept potato
   
-  printf("Value of potato: %u\n", potato_buffer[0].current_hop);
+  printf("Value of potato.num_hops = %u (expected 65)\n",
+	 potato_buffer[0].num_hops);
 
+  printf("Value of potato.current_hop = %u (expected 66)\n",
+	 potato_buffer[0].current_hop);
+  
+  
   freeaddrinfo(player_info_list);
   		
   close(ringmaster_socket_fd);

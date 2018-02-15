@@ -36,23 +36,21 @@ int main(int argc, char* argv[]){
     exit(EXIT_FAILURE);
   }
   
-
-  const char * machine_name = argv[1];
-  const unsigned int port_num = atoi(argv[2]);
+  const char * port_num = argv[2];
   
   int status;
   int player_socket_fd;
   struct addrinfo player_info;
   struct addrinfo *host_info_list;
   const char *ringmaster_name = argv[1];
-  const char *port     = "4444";
+  //const char *port     = "4444";
   
 
   memset(&player_info, 0, sizeof(player_info));
   player_info.ai_family   = AF_UNSPEC;
   player_info.ai_socktype = SOCK_STREAM;
 
-  status = getaddrinfo(ringmaster_name, port, &player_info, &host_info_list);
+  status = getaddrinfo(ringmaster_name, port_num, &player_info, &host_info_list);
   if (status != 0) {
     fprintf(stderr, "Error: getaddrinfo() call failed\n");
     exit(EXIT_FAILURE);
@@ -64,7 +62,7 @@ int main(int argc, char* argv[]){
     fprintf(stderr, "Error: socket() call failed\n");
     exit(EXIT_FAILURE);
   }
-  printf("Connecting to %s on port %s\n", ringmaster_name, port);
+  printf("Connecting to %s on port %s\n", ringmaster_name, port_num);
 
   
   status = connect(player_socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
@@ -75,8 +73,8 @@ int main(int argc, char* argv[]){
 
   //const char *message = "hi there!";
 
-  const potato hot_potato = {.num_hops = 4, .current_hop = 2};
-  printf("Potato's num_hops = %u, current_hops = %u\n", hot_potato.num_hops, hot_potato.current_hop);
+  const potato hot_potato = {.num_hops = 65, .current_hop = 66};
+  //printf("Potato's num_hops = %u, current_hops = %u\n", hot_potato.num_hops, hot_potato.current_hop);
   
   
   send(player_socket_fd, &hot_potato, sizeof(potato), 0);
