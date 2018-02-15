@@ -1,8 +1,11 @@
-// "Potato" struct for passing and record keeping in Hot Potato game
-
+/* ECE650 -- Homework3 -- Connor Grehlinger
+ * 
+ * "Potato" struct for passing and record keeping in Hot Potato game
+ *
+ *
+ */
 // There is a constraint on the number of hops
-#define MAX_HOPS 512
- 
+#define MAX_HOPS 512 
 
 typedef struct potato_t{
   // number of hops in the game:

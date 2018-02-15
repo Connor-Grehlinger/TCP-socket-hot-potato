@@ -25,6 +25,10 @@
  * port_num = port used by ringmaster to communicate with players
  * 
  */
+
+// --------------------------- prev -----------------------------
+/* 
+
 int main(int argc, char* argv[]){
   // Validate command line arguments:                                                        
   if (argc != 3){
@@ -88,7 +92,85 @@ int main(int argc, char* argv[]){
 
   return EXIT_SUCCESS;
 }
+*/
+// --------------------------- end prev --------------------
 
+int main(int argc, char* argv[]){
+  // Validate command line arguments:
+  /*               
+  if (argc != 3){
+    fprintf(stderr, "Error: usage is ./player <machine_name> <port_num>\n");
+    exit(EXIT_FAILURE);
+  }
+  */
+  if ((atoi(argv[2]) < 0) || (atoi(argv[2]) > 65535)){
+    fprintf(stderr, "Error: please choose a valid port number\n");
+    exit(EXIT_FAILURE);
+  }
+  
+  const char * port_num = argv[2];
+  
+  int status;
+  int player_socket_fd;
+  struct addrinfo player_info;
+  struct addrinfo *host_info_list;
+  const char *ringmaster_name = argv[1];
+  //const char *port     = "4444";
+  
+
+  memset(&player_info, 0, sizeof(player_info));
+  player_info.ai_family   = AF_UNSPEC;
+  player_info.ai_socktype = SOCK_STREAM;
+
+  status = getaddrinfo(ringmaster_name, port_num, &player_info, &host_info_list);
+  if (status != 0) {
+    fprintf(stderr, "Error: getaddrinfo() call failed\n");
+    exit(EXIT_FAILURE);
+  }
+  player_socket_fd = socket(host_info_list->ai_family, 
+		     host_info_list->ai_socktype, 
+		     host_info_list->ai_protocol);
+  if (player_socket_fd == -1) {
+    fprintf(stderr, "Error: socket() call failed\n");
+    exit(EXIT_FAILURE);
+  }
+  printf("Connecting to %s on port %s\n", ringmaster_name, port_num);
+
+  
+  status = connect(player_socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
+  if (status == -1){
+    fprintf(stderr, "Error: cannot connect to socket\n");
+    exit(EXIT_FAILURE);
+  }
+
+  //const char *message = "hi there!";
+
+  const potato hot_potato = {.num_hops = atoi(argv[3]),
+			     .current_hop = atoi(argv[4])};
+  //printf("Potato's num_hops = %u, current_hops = %u\n", hot_potato.num_hops, hot_potato.current_hop);
+  
+  // send the potato 
+  //send(player_socket_fd, &hot_potato, sizeof(potato), 0);
+
+
+  // see if you can read without doing setsockopt, bind and listen
+
+  char data_buffer[100];
+  recv(player_socket_fd, data_buffer, sizeof(char) * 100, 0);
+
+  data_buffer[2] = '\0';
+  printf("Received player_id = %s\n", data_buffer);
+
+  
+  freeaddrinfo(host_info_list);
+  close(player_socket_fd);
+
+
+  // do subsequent checks for opening connections/etc. 
+
+
+  return EXIT_SUCCESS;
+}
 
 
 
