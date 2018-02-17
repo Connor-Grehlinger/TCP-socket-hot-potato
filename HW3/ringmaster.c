@@ -33,7 +33,7 @@ typedef struct player_info_t{
 typedef struct addrinfo host_info;
 
 /* Generate a socket file descriptor */
-int generate_socket_fd(host_info* player_info_list){
+int generate_socket_fd_int(struct addrinfo * player_info_list){
   if (player_info_list == NULL){
     fprintf(stderr, "Error: NULL addrinfo struct passed to 'generate_socket_fd'\n");
     return -1; // return to indicate error
@@ -45,6 +45,23 @@ int generate_socket_fd(host_info* player_info_list){
   if (socket_fd == -1){ // check for socket call error
     fprintf(stderr, "Error: socket() call failed\n");
     return -1;
+  }
+  return socket_fd;
+}
+
+/* Generate a socket file descriptor from addrinfo struct */
+int generate_socket_fd(struct addrinfo * player_info_list){
+  if (player_info_list == NULL){
+    fprintf(stderr, "Error: NULL addrinfo struct passed to 'generate_socket_fd'\n");
+    exit(EXIT_FAILURE); // return to indicate error
+  }
+  int socket_fd = socket(player_info_list->ai_family, 
+			 player_info_list->ai_socktype, 
+			 player_info_list->ai_protocol);
+
+  if (socket_fd == -1){ // check for socket call error
+    fprintf(stderr, "Error: socket() call failed\n");
+    exit(EXIT_FAILURE);
   }
   return socket_fd;
 }
@@ -93,6 +110,13 @@ void search_for_players(const char * host_name, const char * port,
   }
 }
 
+void print_address(struct addrinfo * host){
+  const struct sockaddr * address_to_connect = host->ai_addr;
+  struct sockaddr_in * address_to_connect_in =
+    (struct sockaddr_in *) address_to_connect;
+  char * ip = inet_ntoa(address_to_connect_in->sin_addr);
+  printf("Address = '%s'\n", ip);
+}
 
 
 /* USAGE:
@@ -144,7 +168,7 @@ int main(int argc, char* argv[]){
   const char* ringmaster_name = NULL;
 
   // Search for the players (error checking done in function)
-  search_for_players(ringmaster_name, port_num, &ringmaster_info, &player_info_list);
+  search_for_players(ringmaster_name, port_num, &ringmaster_info, &player_info_list); // source of unitialized data
   
   // Generate ringmaster's socket fd (error checking done in function)
   ringmaster_socket_setup = generate_socket_fd(player_info_list); 
@@ -157,15 +181,14 @@ int main(int argc, char* argv[]){
     exit(EXIT_FAILURE);
   }
 
-  // For development and debugging
-  // traverse the linked list to print all hosts found 
+  // For development and debugging: traverse the linked list to print all hosts found 
   host_info * temp = player_info_list;
   int count = 0;
   while (temp != NULL){
     const struct sockaddr * address_to_connect = temp->ai_addr;
     struct sockaddr_in * address_to_connect_in = (struct sockaddr_in *) address_to_connect;
     char * ip = inet_ntoa(address_to_connect_in->sin_addr);
-    printf("Connection: %d. Address = %s\n", count, ip);
+    printf("Found connection %d has address = '%s'\n", count, ip);
     count++;
     temp = temp->ai_next;
   }
@@ -174,11 +197,14 @@ int main(int argc, char* argv[]){
   // EVERYTHING IN HERE MUST BE INITIALIZED!
   
   player_info player_arr[num_players];
+  memset(player_arr, 0, num_players * sizeof(player_info));
   player_setup player_setups[num_players];
+  memset(player_setups, 0, num_players * sizeof(player_setup));
+  // could manage in heap:
   //player_info* player_arr = malloc(num_players * sizeof(*player_arr));
 
-  // N players, having IDs 0 - N-1
-  int player_number = 0;
+  // N players, having IDs [0 - (N-1)]
+
   struct addrinfo * current_player = player_info_list;
 
   // get the last found player (assumes all players have started)
@@ -186,39 +212,32 @@ int main(int argc, char* argv[]){
   while (last_player->ai_next != NULL){
     last_player = last_player->ai_next;
   }
-  const struct sockaddr * address_to_connect = last_player->ai_addr;
-  struct sockaddr_in * address_to_connect_in = (struct sockaddr_in *) address_to_connect;
-  char * ip = inet_ntoa(address_to_connect_in->sin_addr);
-  printf("Last player's address = %s\n", ip);
+  printf("Number of found players = %d. Last player address on following line:\n", count);
+  print_address(last_player);
   
   for (int i = 0; i < num_players ; i++){
     player_arr[i].player_id = i;
     player_arr[i].is_connected = 0;
-    printf("Created player %u's id = %u\n", i,i);
-
-    // socket
-    player_arr[i].input_socket = socket(current_player->ai_family,
-					current_player->ai_socktype,
-					current_player->ai_protocol);
+    printf("Setting up player %u\n", i);
+    print_address(current_player);
     
-    if (player_arr[i].input_socket == -1){ // check for socket call error
-      fprintf(stderr, "Error: socket() call failed\n");
-      return -1;
-    }
+    // create player's input socket 
+    player_arr[i].input_socket = generate_socket_fd(current_player);
 
-    // connect
+    // connect to players input socket to send game setup info
     status = connect(player_arr[i].input_socket, current_player->ai_addr,
 		     current_player->ai_addrlen);
     if (status == -1){
       fprintf(stderr, "Error: cannot connect to socket\n");
       exit(EXIT_FAILURE);
     }
-    // create player set up struct
+    
+    // create player_setup struct
     player_setups[i].player_id = i;
-    player_setups[i].player_info = *current_player;
+    player_setups[i].player_info = *current_player;  // may need to check this
 
     if (i == 0){
-      player_setups[i].left_player_id = num_players -1;   
+      player_setups[i].left_player_id = num_players - 1;   
       player_setups[i].left_player_info = *last_player; // probably not a problem
 
     }
@@ -235,17 +254,21 @@ int main(int argc, char* argv[]){
       player_setups[i].right_player_id = i + 1;
       player_setups[i].right_player_info = *(player_setups[i].player_info.ai_next);
     }
-    const player_setup * player_setup_buffer = &player_setups[i];
-    //const player_setup player_setup_buffer[1] = {player_setups[i]};
+    
+    //const player_setup * player_setup_buffer = &player_setups[i];
+    const player_setup player_setup_buffer[1] = {player_setups[i]};
     printf("size of sent set up buffer = %zu\n", sizeof(player_setup_buffer));
-    printf("size of sent set up buffer[0] = %zu\n", sizeof(*player_setup_buffer));
+
     //printf("This player's id = %d\n", player_setup_buffer[0].player_id);
     //printf("Right player's id = %d\n", player_setup_buffer[0].right_player_id);
     //printf("Left player's id = %d\n", player_setup_buffer[0].left_player_id);
-    printf("pre send\n");
-    send(player_arr[i].input_socket, player_setup_buffer, sizeof(*player_setup_buffer), 0);
+    printf("Pre send\n");
+    send(player_arr[i].input_socket, player_setup_buffer, sizeof(player_setup_buffer), 0);
     printf("Post send\n");
     // otherwise its because stuff isn't initialized in the addrinfo structs in LL
+
+    current_player = current_player->ai_next;
+    printf("End this player, next player == NULL: %d\n", current_player == NULL);
   } 
     
   // you're going to assign a fd to the players input, and send

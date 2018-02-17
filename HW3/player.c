@@ -91,6 +91,7 @@ int main(int argc, char* argv[]){
 
   struct addrinfo left_player_info;
   struct addrinfo right_player_info;
+  struct addrinfo player_info_f_ringmaster;
   
   struct addrinfo player_info;
   struct addrinfo *host_info_list;
@@ -176,11 +177,35 @@ int main(int argc, char* argv[]){
   
   printf("Number of bytes received = %li\n", bytes_recv);
 
-  printf("This player's id = %d\n", player_setup_buffer[0].player_id);
-  printf("Right player's id = %d\n", player_setup_buffer[0].right_player_id);
-  printf("Left player's id = %d\n", player_setup_buffer[0].left_player_id);
+
+  const int player_id = player_setup_buffer[0].player_id;
+  const int left_player_id = player_setup_buffer[0].left_player_id;
+  const int right_player_id = player_setup_buffer[0].right_player_id;
+
+  printf("This player's id = %d\n", player_id);
+  printf("Right player's id = %d\n", right_player_id);
+  printf("Left player's id = %d\n", left_player_id);
+
+  left_player_info = player_setup_buffer[0].left_player_info;
+  right_player_info = player_setup_buffer[0].right_player_info;;
+  player_info_f_ringmaster = player_setup_buffer[0].player_info;;
+    
 
   
+  printf("Replying to ringmaster...\n");
+  
+  
+  // Free dynamically allocated linked list of addrinfo structs
+  freeaddrinfo(host_info_list);
+  close(player_ringmaster_soc);
+
+
+
+
+  return EXIT_SUCCESS;
+}
+
+
   /*
   for (int i = 0; player_id_buffer[i] != '\0'; i++){
     printf("--- position %d is non-null ---\n", i);
@@ -209,8 +234,8 @@ int main(int argc, char* argv[]){
   // send the potato 
   //send(player_socket_fd, &hot_potato, sizeof(potato), 0);
 
-  
-  printf("Replying to ringmaster...\n");
+
+
 
   /*
    
@@ -231,19 +256,3 @@ int main(int argc, char* argv[]){
   printf("String length of reply string = %zu\n", strlen(reply_num_recv));
   send(player_ringmaster_con, reply_num_recv, sizeof(char)*(strlen(reply_num_recv)+1), 0); 
   */
-  
-  // Free dynamically allocated linked list of addrinfo structs
-  freeaddrinfo(host_info_list);
-  close(player_ringmaster_soc);
-
-  // do subsequent checks for opening connections/etc. 
-
-
-  return EXIT_SUCCESS;
-}
-
-
-
-
-
-
