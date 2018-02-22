@@ -101,7 +101,7 @@ void search_for_players(const char * host_name, const char * port,
   // Set the hints parameter (target_hosts_spec) to select the following attributes  
   target_hosts_spec->ai_family = AF_UNSPEC; // allows IPv4 or IPv6
   target_hosts_spec->ai_socktype = SOCK_STREAM; // use TCP
-  //target_hosts_spec->ai_flags = AI_PASSIVE; // accept wildcard addresses 
+  target_hosts_spec->ai_flags = AI_PASSIVE; // accept wildcard addresses 
   
   int status = getaddrinfo(host_name, port, target_hosts_spec, player_info_list);
   if (status != 0){
@@ -193,9 +193,17 @@ int main(int argc, char* argv[]){
     temp = temp->ai_next;
   }
   
-
-  // EVERYTHING IN HERE MUST BE INITIALIZED!
   
+  // Have ringmaster in listening state to accept connections and learn player info
+  status = listen(ringmaster_socket_setup, 100);
+  if (status == -1){
+    fprintf(stderr, "Error: cannot listen on socket (listen() call failed)\n");
+    exit(EXIT_FAILURE);
+  }
+  printf("Listening for players on port %s\n",  port_num);
+
+
+  // EVERYTHING IN HERE MUST BE INITIALIZED!  
   player_info player_arr[num_players];
   memset(player_arr, 0, num_players * sizeof(player_info));
   player_setup player_setups[num_players];
@@ -203,8 +211,40 @@ int main(int argc, char* argv[]){
   // could manage in heap:
   //player_info* player_arr = malloc(num_players * sizeof(*player_arr));
 
-  // N players, having IDs [0 - (N-1)]
 
+  // !!!!!!! Big changes !!!!!!!!!!!!
+  // This will have to change, you need to accept from here
+
+  // accept call updates a sockaddr struct and that struct will correspond to player
+  // info
+  for (int i = 0; i < num_players ; i++){
+
+    struct sockaddr_storage socket_addr;
+    socklen_t socket_addr_len = sizeof(socket_addr);
+    
+    player_arr[i].input_socket = accept(ringmaster_socket_setup,
+					(struct sockaddr *)&socket_addr,
+					&socket_addr_len);
+    
+
+    
+    
+    player_ringmaster_con = accept(player_ringmaster_soc, (struct sockaddr *)&socket_addr, &socket_ad\
+				   dr_len);
+
+    // print the ip of ringmaster
+    const struct sockaddr * connected_ringmaster = (struct sockaddr *)&socket_addr;
+      struct sockaddr_in * address_to_connect_in =
+	(struct sockaddr_in *) connected_ringmaster;
+      char * ip = inet_ntoa(address_to_connect_in->sin_addr);
+      printf("Ringmaster connection address: %s\n",ip);
+      
+
+  }
+
+  
+
+  /*
   struct addrinfo * current_player = player_info_list;
 
   // get the last found player (assumes all players have started)
@@ -271,6 +311,7 @@ int main(int argc, char* argv[]){
     printf("End this player, next player == NULL: %d\n", current_player == NULL);
   } 
     
+  */
   // you're going to assign a fd to the players input, and send
   // the set up information 
   // socket, connect, send 
