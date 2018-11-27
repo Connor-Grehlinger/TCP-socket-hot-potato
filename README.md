@@ -12,7 +12,7 @@ The player process is responsible for its initial contact with the ringmaster an
 
 To play hot potato:
 1) Download or clone the source code to one or many machines
-2) build with the included Makefile
+2) Build with the included Makefile
 3) Run ONE instance of the ringmaster process, syntax: './ringmaster <port_to_listen_on> <number_of_players> <number_of_hops_in_game>'
 4) Run number_of_players instances of the player process, syntax: './player <IP_of_ringmaster_machine> <port_ringmaster_listing_on>'
 5) When the ringmaster and all players are up and running, the game will begin, and its trace output to the console.
